@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+marvl-code/data
+BLIP/output
+BLIP/annotation
+*.Untitled.ipynb
+*.Untitled1.ipynb
