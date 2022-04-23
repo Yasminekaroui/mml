@@ -1,6 +1,0 @@
-{ann_root: /mnt/localdata/karoui/datasets/nlvr2/annotations, batch_size_test: 128,
-batch_size_train: 16, image_root: /mnt/localdata/karoui/datasets/nlvr2/images_new,
-image_size: 384, init_lr: 3e-05, max_epoch: 15, min_lr: 0, ml_model_path_tr_avg: /mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2_avg_tr2022-04-14_17-54-39/weights,
-ml_model_path_tr_cls: /mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2_cls_tr2022-04-14_17-51-56/weights,
-pretrained: https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_nlvr.pth,
-vit: base, vit_ckpt_layer: 0, vit_grad_ckpt: false, weight_decay: 0.05}
