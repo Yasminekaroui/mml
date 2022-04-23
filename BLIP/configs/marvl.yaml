@@ -1,0 +1,29 @@
+image_root: '/mnt/localdata/karoui/datasets/marvl/marvl-images/' 
+#ann_root: '/mnt/localdata/karoui/datasets/marvl/marvl-annotations/machine_translations/' #english translations
+ann_root: '/mnt/localdata/karoui/datasets/marvl/marvl-annotations/' #original translations
+eng: False
+
+
+# set pretrained as a file path or an url
+pretrained: 'https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_nlvr.pth'
+
+ml_model_path_tr_cls: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2_cls_tr2022-04-14_17-51-56/weights"
+ml_model_path_tr_avg: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2_avg_tr2022-04-14_17-54-39/weights"
+
+
+#size of vit model; base or large
+vit: 'base'
+batch_size_train: 16 
+batch_size_test: 64 
+vit_grad_ckpt: False
+vit_ckpt_layer: 0
+max_epoch: 15
+
+image_size: 384
+
+# optimizer
+weight_decay: 0.05
+init_lr: 3e-5
+min_lr: 0
+
+

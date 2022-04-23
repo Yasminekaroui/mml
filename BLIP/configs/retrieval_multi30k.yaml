@@ -1,0 +1,36 @@
+image_root: '/mnt/storage01/datasets/flickr30k/full/images/'
+ann_root: '/mnt/localdata/karoui/datasets/multi30k/'
+eng: False
+
+
+# set pretrained as a file path or an url
+pretrained: 'https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_retrieval_flickr.pth'
+ml_model_path_de_cls: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/multi30k_de_cls2022-04-14_18-28-41/weights"
+ml_model_path_de_avg: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/multi30k_de_avg2022-04-14_18-32-32/weights"
+
+# size of vit model; base or large
+
+vit: 'base'
+batch_size_train: 32
+batch_size_test: 128
+vit_grad_ckpt: True
+vit_ckpt_layer: 4
+init_lr: 1e-5
+
+# vit: 'large'
+# batch_size_train: 16
+# batch_size_test: 32
+# vit_grad_ckpt: True
+# vit_ckpt_layer: 10
+# init_lr: 5e-6
+
+image_size: 384
+queue_size: 57600
+alpha: 0.4
+k_test: 128
+negative_all_rank: False
+
+# optimizer
+weight_decay: 0.05
+min_lr: 0
+max_epoch: 6
