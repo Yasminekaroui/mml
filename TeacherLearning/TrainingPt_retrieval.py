@@ -80,7 +80,6 @@ class multi30k_de(Dataset):
     def prepare_embeddings(self, split):
         """
         embeddings_path(str) = "/mnt/localdata/karoui/datasets/nlvr2/blip_text_embeddings_en/"
-
         """
         if self.embed_type == "cls":
              filenames = {
@@ -136,7 +135,6 @@ class flickr_dataset(Dataset):
     def prepare_embeddings(self, split, filenames):
         """
         embeddings_path(str) = "/mnt/localdata/karoui/datasets/flickr/blip_embeds/"
-
         """
         
         embeddings = None
@@ -153,7 +151,6 @@ class flickr_dataset(Dataset):
         """
         annotation_path(str) : "/mnt/localdata/karoui/datasets/flickr/annotations/"
         language(str) : in ['id', 'sw', 'ta', 'tr', 'zh']
-
         """
    
         sentences = []
@@ -181,11 +178,11 @@ def createModel(modelBase, embed_type):
     #tokenizer = transformers.AutoTokenizer.from_pretrained(modelBase)
     return model #, tokenizer
 
-def init_tokenizer():
+def init_tokenizer(tokenizer):
     '''
     BLIP init_tokenizer function
     '''
-    tokenizer = transformers.AutoTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
+    tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer)
     tokenizer.add_special_tokens({'bos_token':'[DEC]'})
     tokenizer.add_special_tokens({'additional_special_tokens':['[ENC]']})       
     tokenizer.enc_token_id = tokenizer.additional_special_tokens_ids[0]  
@@ -312,7 +309,7 @@ def trainStudentTextEncoder(config, args):
     print("Initialize model")
     #model, tokenizer = createModel(modelBase, args.embed_type)
     model = createModel(modelBase, args.embed_type)
-    tokenizer = init_tokenizer()
+    tokenizer = init_tokenizer(config[f'tokenizer_{args.lan}'])
     model.transformer.resize_token_embeddings(len(tokenizer))
 
     print("prepare data")
@@ -440,6 +437,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", default="flickr") # or multi30k_de
 
     parser.add_argument("--embed_type", default="cls") #could be avg or cls
+    parser.add_argument("--lan", default="tr") #language
 
     args = parser.parse_args()
     
@@ -447,4 +445,3 @@ if __name__ == "__main__":
 
     trainStudentTextEncoder(config, args)
     print('Finished Training')
-

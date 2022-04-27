@@ -7,9 +7,14 @@ eng: False
 # set pretrained as a file path or an url
 pretrained: 'https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_nlvr.pth'
 
-ml_model_path_tr_cls: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2_cls_tr2022-04-14_17-51-56/weights"
-ml_model_path_tr_avg: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2_avg_tr2022-04-14_17-54-39/weights"
+ml_model_path_tr_cls: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2/tr_cls2022-04-26_19-03-07/weights"
+ml_model_path_tr_avg: "/mnt/localdata/karoui/code/Multilingual-CLIP/src/TeacherLearning/experiments/nlvr2/tr_avg2022-04-27_11-37-29/weights"
 
+
+# set tokenizer 
+tokenizer_de : "dbmdz/bert-base-german-cased" #german
+tokenizer_en: 'bert-base-uncased' # english
+tokenizer_tr: "dbmdz/bert-base-turkish-cased" #turkish
 
 #size of vit model; base or large
 vit: 'base'

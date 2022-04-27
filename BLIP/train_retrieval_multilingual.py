@@ -9,11 +9,13 @@ import argparse
 import os
 import ruamel.yaml as yaml
 import numpy as np
+import pandas as pd
 import random
 import time
 import datetime
 import json
 from pathlib import Path
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -92,7 +94,7 @@ def evaluation(model, data_loader, device, config):
         text_embeds.append(text_embed)   
         text_ids.append(text_input.input_ids)
         text_atts.append(text_input.attention_mask)
-    
+        
     text_embeds = torch.cat(text_embeds,dim=0)
     text_ids = torch.cat(text_ids,dim=0)
     text_atts = torch.cat(text_atts,dim=0)
@@ -108,7 +110,7 @@ def evaluation(model, data_loader, device, config):
         
         image_feats.append(image_feat.cpu())
         image_embeds.append(image_embed)
-     
+        
     image_feats = torch.cat(image_feats,dim=0)
     image_embeds = torch.cat(image_embeds,dim=0)
     
@@ -157,7 +159,7 @@ def evaluation(model, data_loader, device, config):
                                    )
         score = model.itm_head(output.last_hidden_state[:,0,:])[:,1]
         score_matrix_t2i[start+i,topk_idx] = score + topk_sim
-
+        
     if args.distributed:
         dist.barrier()   
         torch.distributed.all_reduce(score_matrix_i2t, op=torch.distributed.ReduceOp.SUM) 
@@ -240,7 +242,7 @@ def evaluation_itc(model, data_loader, device, config):
         
         topk_sim, topk_idx = sims.topk(k=config['k_test'], dim=0)
         score_matrix_t2i[start+i,topk_idx] = topk_sim
-
+     
     if args.distributed:
         dist.barrier()   
         torch.distributed.all_reduce(score_matrix_i2t, op=torch.distributed.ReduceOp.SUM) 
@@ -299,6 +301,106 @@ def itm_eval(scores_i2t, scores_t2i, txt2img, img2txt):
                     'r_mean': r_mean}
     return eval_result
 
+@torch.no_grad()
+def get_single_embedding(model, text, device, train=False, embed_type=None):
+        text = model.tokenizer(text, padding='longest', return_tensors="pt").to(device) 
+        text.input_ids[:,0] = model.tokenizer.enc_token_id 
+        att = text.attention_mask
+
+        output = model.text_encoder(text.input_ids, 
+                                    attention_mask = text.attention_mask,   
+                                    return_dict = True,
+                                    mode="text"
+                                )
+        if embed_type == "avg":                
+            embs = output.last_hidden_state
+            sampleLength = att.sum(dim=-1, keepdims=True) 
+            maskedEmbs = embs * torch.unsqueeze(att, -1) 
+            return maskedEmbs.sum(dim=1) / sampleLength 
+        elif embed_type == "cls": 
+            return output.last_hidden_state[:,0,:]
+        else:
+             return output.last_hidden_state
+
+def get_text_embeds(args, config):
+    utils.init_distributed_mode(args)    
+    
+    device = torch.device(args.device)
+
+    # fix the seed for reproducibility
+    seed = args.seed + utils.get_rank()
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    cudnn.benchmark = True
+
+    #### Dataset #### 
+    print("Creating retrieval dataset")
+    train_dataset, val_dataset, test_dataset = create_dataset('retrieval_%s'%config['dataset'], config, args)  
+
+    if args.distributed:
+        num_tasks = utils.get_world_size()
+        global_rank = utils.get_rank()            
+        samplers = create_sampler([train_dataset], [True], num_tasks, global_rank) + [None, None]
+    else:
+        samplers = [None, None, None]
+    
+    train_loader, val_loader, test_loader = create_loader([train_dataset, val_dataset, test_dataset],samplers,
+                                                          batch_size=[config['batch_size_test']]+[config['batch_size_test']]*2,
+                                                          num_workers=[4,4,4],
+                                                          is_trains=[False, False, False], 
+                                                          collate_fns=[None,None,None])   
+   
+
+    #### Model #### 
+    print("Creating model")
+    model = blip_retrieval(pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
+                             vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'], 
+                             queue_size=config['queue_size'], negative_all_rank=config['negative_all_rank'])
+
+    model = model.to(device)   
+    
+    model_without_ddp = model
+    if args.distributed:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model_without_ddp = model.module  
+                                
+    start_time = time.time()
+    print("train samples", len(train_dataset))
+    for _, text, _ in tqdm(train_loader):
+      
+        embs = get_single_embedding(model, text, device, train=False, embed_type=args.embed_type)
+        features_np = embs.cpu().data.numpy()
+        features_df = pd.DataFrame(features_np) 
+        features_df.to_csv(os.path.join(args.features_dir,f'features_train_{args.embed_type}.csv'), mode='a', header=False)
+    print("embeddings train  saved")
+    print("val samples", len(val_dataset))
+    for _, text, _ in tqdm(val_loader):
+        
+        embs = get_single_embedding(model, text, device, train=False, embed_type=args.embed_type)
+        features_np = embs.cpu().data.numpy()
+        features_df = pd.DataFrame(features_np) 
+        features_df.to_csv(os.path.join(args.features_dir,f'features_dev_{args.embed_type}.csv'), mode='a', header=False)
+    print("embeddings val  saved") 
+    print("test samples", len(test_dataset))
+    for _, text, _ in tqdm(test_loader):
+        
+        embs = get_single_embedding(model, text, device, train=False, embed_type=args.embed_type)
+        features_np = embs.cpu().data.numpy()
+        features_df = pd.DataFrame(features_np) 
+        features_df.to_csv(os.path.join(args.features_dir,f'features_test_{args.embed_type}.csv'), mode='a', header=False)
+    print("embeddings test  saved")  
+        
+
+    
+
+        
+        
+
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print('Training time {}'.format(total_time_str)) 
+
 
 def main(args, config):
     utils.init_distributed_mode(args)    
@@ -339,15 +441,17 @@ def main(args, config):
                              vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'], 
                              queue_size=config['queue_size'], negative_all_rank=config['negative_all_rank'])
     else:
-        model = blip_retrieval_ml(path = config[f'ml_model_path_{args.lan}_{args.embed_type}'], pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
+        model = blip_retrieval_ml(path = config[f'ml_model_path_{args.lan}_{args.embed_type}'], tokenizer=config[f'tokenizer_{args.lan}'], pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
                              vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'], 
                              queue_size=config['queue_size'], negative_all_rank=config['negative_all_rank'])
-        model_en = blip_retrieval(pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
-                             vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'], 
-                             queue_size=config['queue_size'], negative_all_rank=config['negative_all_rank'])
-        # change weights of special_tokens bos_token:[DEC] and [ENC]: copy them from the original english version of blip
-        #model.text_encoder.embeddings.word_embeddings.weight[-1, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-1, :] 
-        #model.text_encoder.embeddings.word_embeddings.weight[-2, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-2, :]
+        if args.enc:
+            model_en = blip_retrieval(pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
+                                vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'], 
+                                queue_size=config['queue_size'], negative_all_rank=config['negative_all_rank'])
+            #change weights of special_tokens bos_token:[DEC] and [ENC]: copy them from the original english version of blip
+            with torch.no_grad():   
+                model.text_encoder.embeddings.word_embeddings.weight[-1, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-1, :] 
+                model.text_encoder.embeddings.word_embeddings.weight[-2, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-2, :]
 
     model = model.to(device)   
     
@@ -356,7 +460,7 @@ def main(args, config):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         model_without_ddp = model.module   
 
-    #optimizer = torch.optim.AdamW(params=model.parameters(), lr=config['init_lr'], weight_decay=config['weight_decay']) 
+    optimizer = torch.optim.AdamW(params=model.parameters(), lr=config['init_lr'], weight_decay=config['weight_decay']) 
     
     best = 0
     best_epoch = 0
@@ -369,7 +473,7 @@ def main(args, config):
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
                 
-            #cosine_lr_schedule(optimizer, epoch, config['max_epoch'], config['init_lr'], config['min_lr'])
+            cosine_lr_schedule(optimizer, epoch, config['max_epoch'], config['init_lr'], config['min_lr'])
             
             #train_stats = train(model, train_loader, optimizer, epoch, device, config)  
 
@@ -384,7 +488,7 @@ def main(args, config):
       
             val_result = itm_eval(score_val_i2t, score_val_t2i, val_loader.dataset.txt2img, val_loader.dataset.img2txt)  
             print(val_result)
-                                
+                                 
             # if val_result['r_mean']>best:
             #     save_obj = {
             #         'model': model_without_ddp.state_dict(),
@@ -429,9 +533,10 @@ def main(args, config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()     
     parser.add_argument('--config', default='./configs/retrieval_flickr.yaml')
-    parser.add_argument('--output_dir', default='output/FLICKR/tr_cls_itc')        
+    parser.add_argument('--output_dir', default='output/FLICKR_new/tr_cls_itc') 
+    parser.add_argument('--features_dir', default="/mnt/localdata/karoui/datasets/flickr30k/blip_embeds")         
     parser.add_argument('--evaluate', action='store_true')
-    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--device', default='cpu')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -448,5 +553,5 @@ if __name__ == '__main__':
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
         
     yaml.dump(config, open(os.path.join(args.output_dir, 'config.yaml'), 'w'))    
-    
+    #get_text_embeds(args, config)
     main(args, config)

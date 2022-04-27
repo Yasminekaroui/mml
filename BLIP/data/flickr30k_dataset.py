@@ -95,9 +95,11 @@ class flickr30k_retrieval_eval(Dataset):
         return len(self.annotation)
     
     def __getitem__(self, index):    
-        
         image_path = os.path.join(self.image_root, self.annotation[index]['image'].split('/')[1])        
         image = Image.open(image_path).convert('RGB')    
         image = self.transform(image)  
 
-        return image, index    
+        ####
+        text = self.text[index]
+
+        return image, text, index    

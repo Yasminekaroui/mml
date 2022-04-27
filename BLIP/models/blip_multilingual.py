@@ -184,8 +184,8 @@ def blip_feature_extractor(pretrained='',**kwargs):
         assert(len(msg.missing_keys)==0)
     return model        
 
-def init_tokenizer():
-    tokenizer = AutoTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
+def init_tokenizer(tokenizer_name):
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     tokenizer.add_special_tokens({'bos_token':'[DEC]'})
     tokenizer.add_special_tokens({'additional_special_tokens':['[ENC]']})       
     tokenizer.enc_token_id = tokenizer.additional_special_tokens_ids[0]  

@@ -120,7 +120,7 @@ def get_single_embedding(model, text, device, train=False, embed_type=None):
                                     return_dict = True,
                                     mode="text"
                                 )
-        if embed_type == "average":                
+        if embed_type == "avg":                
             embs = output.last_hidden_state
             sampleLength = att.sum(dim=-1, keepdims=True) 
             maskedEmbs = embs * torch.unsqueeze(att, -1) 
@@ -164,7 +164,8 @@ def main(args, config):
 
     #### Dataset #### 
     print("Creating dataset")
-    datasets = create_dataset('nlvr', config) 
+    datasets = create_dataset('nlvr', config, args) 
+    #datasets = create_dataset('retrieval_flickr', config, args)
     
     if args.distributed:
         num_tasks = utils.get_world_size()
@@ -178,7 +179,7 @@ def main(args, config):
                                                           num_workers=[4,4,4],is_trains=[False,False,False], 
                                                           collate_fns=[None,None,None])
     
-    print("train samples", len(datasets[0]))
+    
     #### Model #### 
     print("Creating model")
     model = blip_nlvr(pretrained=config['pretrained'], image_size=config['image_size'], 
@@ -186,40 +187,37 @@ def main(args, config):
 
     model = model.to(device) 
    
-   
-    
     model_without_ddp = model
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         model_without_ddp = model.module    
 
     start_time = time.time()
-
+    print("train samples", len(datasets[0]))
     for _, _, text, _ in tqdm(train_loader):
-        
-        '''
-        text = model.tokenizer(text, padding='longest', return_tensors="pt").to(device) 
-        text.input_ids[:,0] = model.tokenizer.enc_token_id 
-
-        embeddings = model.text_encoder.embeddings(input_ids=text.input_ids)
-        encoder_outputs = model.text_encoder.encoder(embeddings, mode='unimodal')
-        '''
-        '''
-        if args.distributed:
-                model = model.module
-
-        #features =  get_text_features(model, text, device)
-        tokenizer = AutoTokenizer.from_pretrained("dbmdz/bert-base-turkish-cased")
-        features =  get_text_features_ml(model,tokenizer, text, device)
-        '''
-        embs = get_single_embedding(model, text, device, train=False, embed_type=None)
+      
+        embs = get_single_embedding(model, text, device, train=False, embed_type=args.embed_type)
         features_np = embs.cpu().data.numpy()
         features_df = pd.DataFrame(features_np) 
-        features_df.to_csv(os.path.join(args.output_dir,'features_train_last_hidden.csv'), mode='a', header=False)
-        print("embeddings saved")
-
-      
-        #dist.barrier() 
+        features_df.to_csv(os.path.join(args.output_dir,f'features_train_{args.embed_type}.csv'), mode='a', header=False)
+    print("embeddings train  saved")
+    print("val samples", len(datasets[1]))
+    for _, _, text, _ in tqdm(val_loader):
+        
+        embs = get_single_embedding(model, text, device, train=False, embed_type=args.embed_type)
+        features_np = embs.cpu().data.numpy()
+        features_df = pd.DataFrame(features_np) 
+        features_df.to_csv(os.path.join(args.output_dir,f'features_dev_{args.embed_type}.csv'), mode='a', header=False)
+    print("embeddings val  saved") 
+    print("test samples", len(datasets[2]))
+    for _, _, text, _ in tqdm(test_loader):
+        
+        embs = get_single_embedding(model, text, device, train=False, embed_type=args.embed_type)
+        features_np = embs.cpu().data.numpy()
+        features_df = pd.DataFrame(features_np) 
+        features_df.to_csv(os.path.join(args.output_dir,f'features_test_{args.embed_type}.csv'), mode='a', header=False)
+    print("embeddings test  saved")  
+        
 
     
 
@@ -234,10 +232,11 @@ def main(args, config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/nlvr.yaml')
-    parser.add_argument('--output_dir', default='output/NLVR')
+    parser.add_argument('--output_dir', default='/mnt/localdata/karoui/datasets/nlvr2/blip_embeds')
     parser.add_argument('--evaluate', action='store_true')      
     parser.add_argument('--device', default='cuda')
-    parser.add_argument('--lan', default='tr')
+    parser.add_argument('--embed_type', default='avg')
+    parser.add_argument('--lan', default='en')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')

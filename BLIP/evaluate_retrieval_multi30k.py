@@ -442,7 +442,7 @@ if __name__ == '__main__':
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', default=True, type=bool)
 
-    parser.add_argument('--exp_name', default=f'test_copy_enc') 
+    parser.add_argument('--exp_name', default='test') 
     parser.add_argument('--features_dir', default='/mnt/localdata/karoui/datasets/multi30k/') 
     parser.add_argument('--embed_type', default='avg')   
     parser.add_argument('--lan', default='de') 

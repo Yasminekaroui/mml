@@ -9,7 +9,8 @@ from models.blip_multilingual import create_vit, init_tokenizer, load_checkpoint
 
 class BLIP_Retrieval_ML(nn.Module):
     def __init__(self,
-                 path, 
+                 path,
+                 tokenizer, 
                  ##### change to relative path#############                
                  med_config = '/home/karoui/marvl_project/BLIP/configs/med_config.json',  
                  image_size = 384,
@@ -32,7 +33,7 @@ class BLIP_Retrieval_ML(nn.Module):
         self.path = path
 
         self.visual_encoder, vision_width = create_vit(vit,image_size, vit_grad_ckpt, vit_ckpt_layer)
-        self.tokenizer = init_tokenizer()   
+        self.tokenizer = init_tokenizer(tokenizer)   
         med_config = BertConfig.from_json_file(med_config)
         med_config.encoder_width = vision_width
         ml_text_enc = AutoModel.from_pretrained(path)

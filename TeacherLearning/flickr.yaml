@@ -5,6 +5,9 @@ ann_root: "/mnt/localdata/karoui/datasets/flickr30k/annotation/"
 # set pretrained as a file path or an url
 modelBase: "dbmdz/bert-base-turkish-cased"
 
+tokenizer_tr: "dbmdz/bert-base-turkish-cased"
+tokenizer_de: "dbmdz/bert-base-german-cased"
+
 language: 'tr'
 clipEmbeddingSize: 768
 learningRate: 5.0e-5

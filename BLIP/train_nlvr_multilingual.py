@@ -30,6 +30,7 @@ from models.blip_nlvr_multilingual import blip_nlvr_ml
 import utils
 from utils import cosine_lr_schedule, warmup_lr_schedule
 from data import create_dataset, create_sampler, create_loader
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def train(model, data_loader, optimizer, epoch, device, config):
     # train
@@ -135,14 +136,15 @@ def main(args, config):
          model = blip_nlvr(pretrained=config['pretrained'], image_size=config['image_size'], 
                          vit=config['vit'], vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'])
     else:
-        model = blip_nlvr_ml(path = config[f'ml_model_path_{args.lan}_{args.embed_type}'],pretrained=config['pretrained'], image_size=config['image_size'], 
+        model = blip_nlvr_ml(path = config[f'ml_model_path_{args.lan}_{args.embed_type}'], tokenizer=config[f'tokenizer_{args.lan}'], pretrained=config['pretrained'], image_size=config['image_size'], 
                             vit=config['vit'], vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'])
         model_en = blip_nlvr(pretrained=config['pretrained'], image_size=config['image_size'], 
                             vit=config['vit'], vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'])
         # change weights of special_tokens bos_token:[DEC] and [ENC]: copy them from the original english version of blip
-        if args.enc :    
-            model.text_encoder.embeddings.word_embeddings.weight[-1, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-1, :] 
-            model.text_encoder.embeddings.word_embeddings.weight[-2, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-2, :]
+        if args.enc : 
+            with torch.no_grad():    
+                model.text_encoder.embeddings.word_embeddings.weight[-1, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-1, :] 
+                model.text_encoder.embeddings.word_embeddings.weight[-2, :] = model_en.text_encoder.embeddings.word_embeddings.weight[-2, :]
 
     model = model.to(device)   
     
@@ -166,6 +168,7 @@ def main(args, config):
             cosine_lr_schedule(optimizer, epoch, config['max_epoch'], config['init_lr'], config['min_lr'])
             
             train_stats = train(model, train_loader, optimizer, epoch,  device, config) 
+           
             
         val_stats = evaluate(model, val_loader, device, config)
         test_stats = evaluate(model, test_loader, device, config)  
@@ -215,7 +218,7 @@ def main(args, config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/nlvr.yaml')
-    parser.add_argument('--output_dir', default='output/NLVR/tr_cls')
+    parser.add_argument('--output_dir', default='coutput/NLVR_new/test')
     parser.add_argument('--evaluate', action='store_true')      
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)

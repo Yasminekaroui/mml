@@ -26,6 +26,7 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader
 ####-------change this to multilingual for the evaluation of non english version-------#####
 from models.blip_retrieval import blip_retrieval
+from models.blip_retrieval_multilingual import blip_retrieval_ml
 import utils
 from utils import cosine_lr_schedule
 from data import create_dataset, create_sampler, create_loader
@@ -355,7 +356,7 @@ def main(args, config):
     print("Creating model")
      #### Model_german ####
     if args.lan == "de":
-        model = blip_retrieval(path = config[f'ml_model_path_{args.lan}'], pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
+        model = blip_retrieval_ml(path = config[f'ml_model_path_{args.lan}'], tokenizer=config[f'tokenizer_{args.lan}'], pretrained=config['pretrained'], image_size=config['image_size'], vit=config['vit'], 
                                 vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'], 
                                 queue_size=config['queue_size'], negative_all_rank=config['negative_all_rank'])
     else:

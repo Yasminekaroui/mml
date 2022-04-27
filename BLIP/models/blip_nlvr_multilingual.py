@@ -9,14 +9,15 @@ from tqdm import tqdm
 import torch
 from torch import nn
 import torch.nn.functional as F
-from transformers import BertTokenizer, AutoModel, TFAutoModel
+from transformers import BertTokenizer, AutoModel
 import numpy as np
 import os 
 
 
 class BLIP_NLVR_ML(nn.Module):
     def __init__(self, 
-                 path,                
+                 path, 
+                 tokenizer,               
                  med_config = 'configs/med_config.json',  
                  image_size = 480,
                  vit = 'base',
@@ -34,7 +35,7 @@ class BLIP_NLVR_ML(nn.Module):
         super().__init__()
         self.path = path
         self.visual_encoder, vision_width = create_vit(vit,image_size, vit_grad_ckpt, vit_ckpt_layer, drop_path_rate=0.1)
-        self.tokenizer = init_tokenizer()   
+        self.tokenizer = init_tokenizer(tokenizer)   
         med_config = BertConfig.from_json_file(med_config)
         med_config.encoder_width = vision_width
         ml_text_enc = AutoModel.from_pretrained(path)

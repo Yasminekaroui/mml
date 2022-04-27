@@ -26,7 +26,7 @@ from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 
-from models.blip_nlvr_multilingual import blip_nlvr
+from models.blip_nlvr_multilingual import blip_nlvr_ml
 
 import utils
 from utils import cosine_lr_schedule, warmup_lr_schedule
@@ -147,7 +147,7 @@ def main(args, config):
 
     #### Dataset #### 
     print("Creating dataset")
-    datasets = create_dataset('marvl', config) 
+    datasets = create_dataset('marvl', config, args) 
     
     
     
@@ -171,9 +171,8 @@ def main(args, config):
     
     #### Model #### 
     print("Creating model")
-    model = blip_nlvr(path = config[f'ml_model_path_{args.lan}_{args.embed_type}'],pretrained=config['pretrained'], image_size=config['image_size'], 
-                         vit=config['vit'], vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'])
-
+    model = blip_nlvr_ml(path = config[f'ml_model_path_{args.lan}_{args.embed_type}'], tokenizer=config[f'tokenizer_{args.lan}'], pretrained=config['pretrained'], image_size=config['image_size'], 
+                                vit=config['vit'], vit_grad_ckpt=config['vit_grad_ckpt'], vit_ckpt_layer=config['vit_ckpt_layer'])
 
     model = model.to(device)   
     
@@ -207,13 +206,13 @@ def main(args, config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/marvl.yaml')
-    parser.add_argument('--output_dir', default='output/MARVL/tr_cls')
+    parser.add_argument('--output_dir', default='output/MARVL/')
     parser.add_argument('--exp_name', default='average_new_real')
     parser.add_argument('--evaluate', action='store_true') 
     ##new
     parser.add_argument('--lan', default='tr')
     parser.add_argument('--embed_type', default='cls')#or avg
-    parser.add_argument('--device', default='cpu')
+    parser.add_argument('--device', default='cuda')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')

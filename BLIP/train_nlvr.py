@@ -82,7 +82,7 @@ def evaluate(model, data_loader, device, config):
         accuracy = (targets==pred_class).sum() / targets.size(0)
         
         metric_logger.meters['acc'].update(accuracy.item(), n=image0.size(0))
-
+        break
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
 
@@ -105,7 +105,7 @@ def main(args, config):
 
     #### Dataset #### 
     print("Creating dataset")
-    datasets = create_dataset('nlvr', config) 
+    datasets = create_dataset('nlvr', config, args) 
     
     if args.distributed:
         num_tasks = utils.get_world_size()
@@ -145,11 +145,11 @@ def main(args, config):
                 
             cosine_lr_schedule(optimizer, epoch, config['max_epoch'], config['init_lr'], config['min_lr'])
             
-            train_stats = train(model, train_loader, optimizer, epoch,  device, config) 
+            #train_stats = train(model, train_loader, optimizer, epoch,  device, config) 
             
         val_stats = evaluate(model, val_loader, device, config)
         test_stats = evaluate(model, test_loader, device, config)  
-        
+        break
         if utils.is_main_process():  
             if args.evaluate:                
                 log_stats = {**{f'val_{k}': v for k, v in val_stats.items()},
@@ -197,11 +197,12 @@ if __name__ == '__main__':
     parser.add_argument('--config', default='./configs/nlvr.yaml')
     parser.add_argument('--output_dir', default='output/NLVR')
     parser.add_argument('--evaluate', action='store_true')      
-    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--device', default='cuda:1')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', default=True, type=bool)
+    parser.add_argument('--lan', default='en')
     args = parser.parse_args()
 
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)

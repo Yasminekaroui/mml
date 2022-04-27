@@ -54,29 +54,30 @@ class nlvr_dataset(Dataset):
             label = 1
         else:
             label = 0
-            
-        words = sentence.split(' ')
         
-        if 'left' not in words and 'right' not in words:
-            if random.random()<0.5:
-                return image0, image1, sentence, label
-            else:
-                return image1, image0, sentence, label
-        else:
-            if random.random()<0.5:
-                return image0, image1, sentence, label
-            else:
-                new_words = []
-                for word in words:
-                    if word=='left':
-                        new_words.append('right')
-                    elif word=='right':
-                        new_words.append('left')        
-                    else:
-                        new_words.append(word)                    
+        return image0, image1, sentence, label   
+        #words = sentence.split(' ')
+        
+        # if 'left' not in words and 'right' not in words:
+        #     if random.random()<0.5:
+        #         return image0, image1, sentence, label
+        #     else:
+        #         return image1, image0, sentence, label
+        # else:
+        #     if random.random()<0.5:
+        #         return image0, image1, sentence, label
+        #     else:
+        #         new_words = [n]
+        #         for word in words:
+        #             if word=='left':
+        #                 new_words.append('right')
+        #             elif word=='right':
+        #                 new_words.append('left')        
+        #             else:
+        #                 new_words.append(word)                    
                         
-                sentence = ' '.join(new_words)
-                return image1, image0, sentence, label
+        #         sentence = ' '.join(new_words)
+        #         return image1, image0, sentence, label
             
             
         

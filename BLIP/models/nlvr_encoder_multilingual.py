@@ -812,7 +812,7 @@ class BertModel(BertPreTrainedModel):
                 input_ids=input_ids,
                 position_ids=position_ids,
                 inputs_embeds=inputs_embeds,
-                #past_key_values_length=past_key_values_length,
+                past_key_values_length=past_key_values_length,
             )
             '''
             embedding_output = self.embeddings(input_ids=input_ids,
