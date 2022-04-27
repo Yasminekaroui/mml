@@ -1,0 +1,2 @@
+model_checkpoint_path: "CLIP-Text-Encoder-tr-150-Weights"
+all_model_checkpoint_paths: "CLIP-Text-Encoder-tr-150-Weights"

@@ -1,0 +1,12 @@
+embeddings_root: '/mnt/localdata/karoui/datasets/multi30k/'
+ann_root: '/mnt/localdata/karoui/datasets/multi30k/'
+
+# set pretrained as a file path or an url
+modelBase: "dbmdz/bert-base-german-cased"
+
+language: 'de'
+clipEmbeddingSize: 768
+learningRate: 5.0e-5
+batchSize: 128
+epochs: 100
+fetchSize: 500 * batchSize

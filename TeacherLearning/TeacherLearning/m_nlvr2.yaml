@@ -1,0 +1,13 @@
+#embeddings_root: "/mnt/localdata/karoui/datasets/nlvr2/blip_text_embeddings_en/" ### old
+embeddings_root: "/mnt/localdata/karoui/datasets/nlvr2/blip_embeds"
+ann_root: "/mnt/localdata/karoui/datasets/nlvr2/annotations/"
+
+# set pretrained as a file path or an url
+modelBase: "dbmdz/bert-base-turkish-cased"
+
+language: 'tr'
+clipEmbeddingSize: 768
+learningRate: 5.0e-5
+batchSize: 128
+epochs: 100
+fetchSize: 500 * batchSize
